@@ -19,6 +19,10 @@ while flag == False:
             client_socket.close()
             flag = True
 
+        elif message == "arret" or reply == "arret":
+            client_socket.close()
+            flag = True
+
     except ConnectionAbortedError:
         print('la connexion a été coupé')
     except ConnectionRefusedError:
