@@ -1,4 +1,5 @@
 import socket
+
 port = 1234
 flag = False
 
@@ -6,7 +7,7 @@ server_socket = socket.socket()
 server_socket.bind(('0.0.0.0', port))
 server_socket.listen(1)
 conn, address = server_socket.accept()
-while flag == False:
+while not flag:
     reply = input("reply=")
 
     try:
@@ -31,5 +32,3 @@ while flag == False:
 
     else:
         print("fin")
-
-

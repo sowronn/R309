@@ -8,7 +8,7 @@ flag = False
 client_socket = socket.socket()
 client_socket.connect((host, port))
 
-while flag == False:
+while not flag:
     message = input("message deux points = ")
     time.sleep(1.5)
     try:

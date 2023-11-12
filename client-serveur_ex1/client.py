@@ -8,12 +8,12 @@ flag = False
 
 client_socket = socket.socket()
 client_socket.connect((host, port))
-while flag == False:
-    message= input("message deux points = ")
+while not flag:
+    message = input("message deux points = ")
     time.sleep(1.5)
     try:
         client_socket.send(message.encode())
-        reply =client_socket.recv(1024).decode()
+        reply = client_socket.recv(1024).decode()
         print(reply)
         if message == "bye":
             flag = True

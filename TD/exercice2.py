@@ -16,7 +16,7 @@ while flag == False:
         print("le fichier existe deja")
 
     except PermissionError:
-        print("permission non suffisante")
+        print("permission insuffisante")
 
     else:
         print(fichier.read())
