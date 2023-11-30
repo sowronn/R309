@@ -9,26 +9,29 @@ client_socket = socket.socket()
 client_socket.connect((host, port))
 
 while not flag:
-    message = input("message : ")
-    time.sleep(1.5)
+    message = input('message =')
+    time.sleep(1)
     try:
         client_socket.send(message.encode())
         reply = client_socket.recv(1024).decode()
         print(reply)
-        if message == "bye" or reply == "bye":
+
+        if message == 'bye' or reply == "bye":
             client_socket.close()
             flag = True
 
-        elif message == "arret" or reply == "arret":
+        if reply == "arret" or message == "arret":
             client_socket.close()
             flag = True
+
+
 
     except ConnectionAbortedError:
-        print('la connexion a été coupé')
+        print('connection stopped')
     except ConnectionRefusedError:
-        print('la connexion a été  refusé')
+        print('connection refused')
     except ConnectionResetError:
-        print('la connexion a été réinitialisé')
+        print('connection reinitialized')
 
     else:
-        print("fin de boucle")
+        print('end')

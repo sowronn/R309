@@ -9,12 +9,10 @@ server_socket.listen(1)
 conn, address = server_socket.accept()
 while not flag:
     reply = input("reply=")
-
     try:
         message = conn.recv(1024).decode()
         print(message)
         conn.send(reply.encode())
-
         if reply == "arret":
             flag = True
             conn.close()

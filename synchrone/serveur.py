@@ -1,30 +1,34 @@
 import socket
-port = 1234
-message = ""
-reply = ""
 
-while message != "arret" and reply != "arret":
+port = 1234
+
+reply = ""
+message = ""
+
+while reply != "arret" and message != "arret":
     server_socket = socket.socket()
     server_socket.bind(('0.0.0.0', port))
     server_socket.listen(1)
     conn, address = server_socket.accept()
-    message = ""
     reply = ""
-    while message != "arret" and reply != "arret" and message != "bye" and reply != "bye":
+    message = ""
+    while message != "bye" and reply != "bye" and message != "arret" and reply != "arret":
         try:
+            reply = input('reply = ')
             message = conn.recv(1024).decode()
             print(message)
-            reply = input("reply:")
             conn.send(reply.encode())
 
+
         except ConnectionAbortedError:
-            print('la connexion a été coupé')
+            print('connection stopped')
         except ConnectionRefusedError:
-            print('la connexion a été  refusé')
+            print('connection refused')
         except ConnectionResetError:
-            print('la connexion a été réinitialisé')
+            print('connection reinitialized')
+
+
 
         else:
             if message == "arret" or reply == "arret":
                 server_socket.close()
-
