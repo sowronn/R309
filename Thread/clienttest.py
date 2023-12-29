@@ -1,16 +1,26 @@
 import socket
 import threading
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QTextEdit, QLineEdit, QPushButton, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QTextEdit, QLineEdit, QPushButton, QVBoxLayout, QInputDialog
+from PyQt5.QtCore import QObject, pyqtSignal
 
 clt_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clt_socket.connect(("127.0.0.1", 1024))
 
 
 class GUI(QWidget):
-
     def __init__(self):
         super().__init__()
+
+        self.username, okPressed = QInputDialog.getText(self, "Nom d'utilisateur", "Entrez votre nom d'utilisateur:",
+                                                        QLineEdit.Normal, "")
+        if okPressed and self.username:
+            # Envoyer le nom d'utilisateur au serveur dès la première demande
+            clt_socket.send(self.username.encode())
+
+        elif not okPressed or not self.username:
+            print("Nom d'utilisateur invalide. Fermeture de l'application.")
+            sys.exit(1)
 
         self.textArea = QTextEdit()
         self.textArea.setReadOnly(True)
@@ -19,57 +29,52 @@ class GUI(QWidget):
         self.lineEdit = QLineEdit()
         self.lineEdit.setFixedHeight(50)
 
-        # Create the send button
         self.sendButton = QPushButton("Send", self)
         self.sendButton.setFixedHeight(50)
-
-        # Connect the button to the sendMessage() method
         self.sendButton.clicked.connect(self.sendMessage)
 
         layout = QVBoxLayout()
         layout.addWidget(self.textArea)
         layout.addWidget(self.lineEdit)
         layout.addWidget(self.sendButton)
-
         self.setLayout(layout)
 
-        # Show the window
-        self.show()
-
     def sendMessage(self):
-        # Get the message from the line edit
         message = self.lineEdit.text()
-
-        # Send the message to the server
         clt_socket.send(message.encode())
-
-        # Clear the line edit
         self.lineEdit.clear()
 
+    def updateTextArea(self, message):
+        self.textArea.insertPlainText(message)
 
-class Client(threading.Thread):
 
-    def __init__(self):
+class ClientThreadSignals(QObject):
+    message_received = pyqtSignal(str)
+
+
+class ClientThread(threading.Thread):
+    def __init__(self, signals):
         super().__init__(daemon=True)
+        self.signals = signals
 
-    def receiveMessage(self):
+    def run(self):
         while True:
-            # Receive a message from the server
             try:
                 message = clt_socket.recv(1024).decode()
-                # Insert the message to the GUI
-                self.window.textArea.insertPlainText(message)
+                self.signals.message_received.emit(message)
             except Exception as e:
-                # An error occurred, stop the thread
-                print(f"Communication error with server : {e}")
+                print(f"Communication error with server: {e}")
                 break
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    client = Client()
-    client.start()
     window = GUI()
-    window.show()
 
+    signals = ClientThreadSignals()
+    client_thread = ClientThread(signals)
+    client_thread.signals.message_received.connect(window.updateTextArea)
+    client_thread.start()
+
+    window.show()
     sys.exit(app.exec_())
