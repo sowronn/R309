@@ -4,9 +4,11 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QTextEdit, QLineEdit, QPushButton, QVBoxLayout, QInputDialog
 from PyQt5.QtCore import QObject, pyqtSignal
 
+client_ip = "192.168.1.3"  # Remplacez ceci par votre implémentation réelle
+
 clt_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clt_socket.connect(("127.0.0.1", 1024))
-
+clt_socket.send(client_ip.encode())
 
 class GUI(QWidget):
     def __init__(self):

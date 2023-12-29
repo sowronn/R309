@@ -6,6 +6,9 @@ clients = []  # Liste pour stocker les connexions des clients
 blacklist = {"192.168.1.2"}
 whitelist = {"192.168.1.1"}
 
+def is_ip_allowed(client_address):
+    """Vérifie si l'adresse IP est dans la whitelist et pas dans la blacklist."""
+    return client_address[0] in whitelist and client_address[0] not in blacklist
 def broadcast(message, sender_conn):
     for client_conn in clients:
         try:
@@ -13,8 +16,20 @@ def broadcast(message, sender_conn):
         except Exception as e:
             print(f"Erreur lors de l'envoi du message au client : {e}")
 
-def handle_client(conn):
-    global state
+def handle_client(conn, client_address):
+    global state, username
+
+    # Vérifie si l'adresse IP est autorisée
+    if not is_ip_allowed(client_address):
+        print(f"Connexion refusée pour l'adresse IP {client_address[0]} (dans la blacklist).")
+        conn.close()
+        return
+
+    # Ajoute l'adresse IP à la whitelist si elle n'est pas déjà présente
+    if client_address[0] not in whitelist:
+        whitelist.add(client_address[0])
+        print(f"Ajout automatique de l'adresse IP {client_address[0]} à la whitelist.")
+
     try:
         username = conn.recv(1024).decode()
         clients.append((conn, username))
