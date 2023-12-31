@@ -3,6 +3,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QTextEdit, QLineEdit, QPushButton, QVBoxLayout, QInputDialog
 from PyQt5.QtCore import QObject, pyqtSignal, QThread
 
+
 class ClientThread(QObject):
     message_received = pyqtSignal(str)
 
@@ -14,6 +15,7 @@ class ClientThread(QObject):
             except Exception as e:
                 print(f"Erreur lors de la réception du message : {e}")
                 break
+
 
 class GUI(QWidget):
     def __init__(self):
@@ -62,9 +64,6 @@ class GUI(QWidget):
         # Envoyer l'adresse IP au serveur pour vérification
         clt_socket.send(client_ip.encode())
 
-        # Envoyer le nom d'utilisateur au serveur dès la première demande
-        clt_socket.send(self.username.encode())
-
     def sendMessage(self):
         message = self.lineEdit.text()
         clt_socket.send(message.encode())
@@ -73,6 +72,7 @@ class GUI(QWidget):
     def updateTextArea(self, message):
         self.textArea.insertPlainText(message)
 
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     clt_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -80,3 +80,4 @@ if __name__ == "__main__":
 
     window = GUI()
     sys.exit(app.exec_())
+

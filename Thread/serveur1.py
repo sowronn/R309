@@ -1,6 +1,5 @@
 import socket
 import threading
-import os
 
 state = True
 clients = []  # Liste pour stocker les connexions des clients
@@ -14,7 +13,7 @@ def broadcast(message, sender_conn):
     for client_conn, username in clients.copy():
         try:
             # Envoyer le message à tous les clients, y compris l'émetteur
-            client_conn.send((f"{username}: {message}" + '\n').encode())
+            client_conn.send((f"{message}" + '\n').encode())
         except Exception as e:
             print(f"Erreur lors de l'envoi du message au client : {e}")
 
@@ -49,6 +48,7 @@ def handle_client(conn, address):
 
         while state:
             message = conn.recv(1024).decode()
+
             if not message:
                 break
 
