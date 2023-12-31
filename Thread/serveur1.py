@@ -1,39 +1,51 @@
 import socket
 import threading
+import os
 
 state = True
 clients = []  # Liste pour stocker les connexions des clients
-blacklist = {"192.168.1.2"}
-whitelist = {"192.168.1.1"}
+blacklist = set("192.168.1.3")  # Utilisez un ensemble pour une recherche plus rapide
 
 def is_ip_allowed(client_address):
-    """Vérifie si l'adresse IP est dans la whitelist et pas dans la blacklist."""
-    return client_address[0] in whitelist and client_address[0] not in blacklist
+    """Vérifie si l'adresse IP n'est pas dans la blacklist."""
+    return client_address[0] not in blacklist
+
 def broadcast(message, sender_conn):
-    for client_conn in clients:
+    for client_conn, username in clients.copy():
         try:
-            client_conn.send((message + '\n').encode())
+            # Envoyer le message à tous les clients, y compris l'émetteur
+            client_conn.send((f"{username}: {message}" + '\n').encode())
         except Exception as e:
             print(f"Erreur lors de l'envoi du message au client : {e}")
 
-def handle_client(conn, client_address):
-    global state, username
+def send_chat_log(conn):
+    try:
+        with open("chat_log.txt", "r") as file:
+            chat_log = file.read()
+            conn.send(chat_log.encode())
+    except FileNotFoundError:
+        pass  # Le fichier n'existe pas encore, pas de problème
 
-    # Vérifie si l'adresse IP est autorisée
-    if not is_ip_allowed(client_address):
-        print(f"Connexion refusée pour l'adresse IP {client_address[0]} (dans la blacklist).")
-        conn.close()
-        return
+def save_message(message):
+    with open("chat_log.txt", "a") as file:
+        file.write(message + "\n")
 
-    # Ajoute l'adresse IP à la whitelist si elle n'est pas déjà présente
-    if client_address[0] not in whitelist:
-        whitelist.add(client_address[0])
-        print(f"Ajout automatique de l'adresse IP {client_address[0]} à la whitelist.")
+def handle_client(conn, address):
+    global state
 
     try:
         username = conn.recv(1024).decode()
         clients.append((conn, username))
-        broadcast(f"Bienvenue {username}!", conn)
+
+        if not is_ip_allowed(address):
+            print(f"Connexion refusée pour l'adresse IP {address[0]} (dans la blacklist).")
+            conn.close()
+            return
+
+        broadcast(f"{username} a rejoint la discussion!", conn)
+
+        # Envoyer la liste des messages précédents au nouveau client
+        send_chat_log(conn)
 
         while state:
             message = conn.recv(1024).decode()
@@ -48,15 +60,17 @@ def handle_client(conn, client_address):
                 print(f'Client {username} déconnecté...')
                 break
             else:
-                # Diffuse le message à tous les clients, y compris l'émetteur
+                # Enregistrer le message dans le fichier
+                save_message(f"{username}: {message}")
+
+                # Envoyer le message à tous les clients, y compris l'émetteur
                 broadcast(f"{username}: {message}", conn)
     except Exception as e:
-        print(f"Erreur de communication avec le client : {e}")
+        print(f"Erreur de communication avec le client {address}: {e}")
 
-    # Retire la connexion de la liste des clients actifs
     clients.remove((conn, username))
     conn.close()
-
+    print(f"Connection closed for {address}")
 
 def main():
     global state
@@ -70,12 +84,7 @@ def main():
         conn, address = server_socket.accept()
         print(f'Client connecté {address}')
 
-        # Ajoute la connexion à la liste des clients actifs
-        clients.append(conn)
-
-        # Lance un thread pour gérer le client
-        threading.Thread(target=handle_client, args=(conn,), daemon=True).start()
-
+        threading.Thread(target=handle_client, args=(conn, address), daemon=True).start()
 
 if __name__ == "__main__":
     main()

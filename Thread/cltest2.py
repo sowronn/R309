@@ -1,12 +1,19 @@
 import socket
-import threading
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QTextEdit, QLineEdit, QPushButton, QVBoxLayout, QInputDialog
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal, QThread
 
-clt_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-clt_socket.connect(("127.0.0.1", 1024))
+class ClientThread(QObject):
+    message_received = pyqtSignal(str)
 
+    def run(self):
+        while True:
+            try:
+                message = clt_socket.recv(1024).decode()
+                self.message_received.emit(message)
+            except Exception as e:
+                print(f"Erreur lors de la réception du message : {e}")
+                break
 
 class GUI(QWidget):
     def __init__(self):
@@ -17,10 +24,6 @@ class GUI(QWidget):
         if okPressed and self.username:
             # Envoyer le nom d'utilisateur au serveur dès la première demande
             clt_socket.send(self.username.encode())
-
-        elif not okPressed or not self.username:
-            print("Nom d'utilisateur invalide. Fermeture de l'application.")
-            sys.exit(1)
 
         self.textArea = QTextEdit()
         self.textArea.setReadOnly(True)
@@ -39,6 +42,29 @@ class GUI(QWidget):
         layout.addWidget(self.sendButton)
         self.setLayout(layout)
 
+        # Show the window
+        self.show()
+
+        # Créer le thread pour la réception des messages
+        self.client_thread = ClientThread()
+        self.client_thread.message_received.connect(self.updateTextArea)
+        self.client_thread_thread = QThread()
+        self.client_thread.moveToThread(self.client_thread_thread)
+        self.client_thread_thread.started.connect(self.client_thread.run)
+        self.client_thread_thread.start()
+
+    def init_connection(self):
+        global clt_socket, client_ip
+        client_ip = "192.168.1.3"  # Remplacez ceci par votre implémentation réelle
+        clt_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clt_socket.connect(("127.0.0.1", 1024))
+
+        # Envoyer l'adresse IP au serveur pour vérification
+        clt_socket.send(client_ip.encode())
+
+        # Envoyer le nom d'utilisateur au serveur dès la première demande
+        clt_socket.send(self.username.encode())
+
     def sendMessage(self):
         message = self.lineEdit.text()
         clt_socket.send(message.encode())
@@ -47,34 +73,10 @@ class GUI(QWidget):
     def updateTextArea(self, message):
         self.textArea.insertPlainText(message)
 
-
-class ClientThreadSignals(QObject):
-    message_received = pyqtSignal(str)
-
-
-class ClientThread(threading.Thread):
-    def __init__(self, signals):
-        super().__init__(daemon=True)
-        self.signals = signals
-
-    def run(self):
-        while True:
-            try:
-                message = clt_socket.recv(1024).decode()
-                self.signals.message_received.emit(message)
-            except Exception as e:
-                print(f"Communication error with server: {e}")
-                break
-
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    clt_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    clt_socket.connect(("127.0.0.1", 1024))
+
     window = GUI()
-
-    signals = ClientThreadSignals()
-    client_thread = ClientThread(signals)
-    client_thread.signals.message_received.connect(window.updateTextArea)
-    client_thread.start()
-
-    window.show()
     sys.exit(app.exec_())
