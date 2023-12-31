@@ -2,34 +2,68 @@ import socket
 import threading
 
 state = True
-clients = []  # Liste pour stocker les connexions des clients
-blacklist = set("192.168.1.3")  # Utilisez un ensemble pour une recherche plus rapide
+clients = []  # List to store client connections
+blacklist = set("192.168.1.3")  # Use a set for faster lookup
 
 def is_ip_allowed(client_address):
-    """Vérifie si l'adresse IP n'est pas dans la blacklist."""
+    """
+    Check if the IP address is allowed based on the blacklist.
+
+    Parameters:
+    - client_address (tuple): The IP address of the client.
+
+    Returns:
+    - bool: True if the IP address is allowed, False otherwise.
+    """
     return client_address[0] not in blacklist
 
 def broadcast(message, sender_conn):
+    """
+    Send a message to all clients, including the sender.
+
+    Parameters:
+    - message (str): The message to be broadcasted.
+    - sender_conn (socket): The connection of the sender.
+    """
     for client_conn, username in clients.copy():
         try:
-            # Envoyer le message à tous les clients, y compris l'émetteur
+            # Send the message to all clients, including the sender
             client_conn.send((f"{message}" + '\n').encode())
         except Exception as e:
-            print(f"Erreur lors de l'envoi du message au client : {e}")
+            print(f"Error sending message to client: {e}")
 
 def send_chat_log(conn):
+    """
+    Send the chat log to a new client.
+
+    Parameters:
+    - conn (socket): The connection of the new client.
+    """
     try:
         with open("chat_log.txt", "r") as file:
             chat_log = file.read()
             conn.send(chat_log.encode())
     except FileNotFoundError:
-        pass  # Le fichier n'existe pas encore, pas de problème
+        pass  # The file doesn't exist yet, no problem
 
 def save_message(message):
+    """
+    Save a message to the chat log file.
+
+    Parameters:
+    - message (str): The message to be saved.
+    """
     with open("chat_log.txt", "a") as file:
         file.write(message + "\n")
 
 def handle_client(conn, address):
+    """
+    Handle communication with a client.
+
+    Parameters:
+    - conn (socket): The connection of the client.
+    - address (tuple): The IP address and port of the client.
+    """
     global state
 
     try:
@@ -37,13 +71,13 @@ def handle_client(conn, address):
         clients.append((conn, username))
 
         if not is_ip_allowed(address):
-            print(f"Connexion refusée pour l'adresse IP {address[0]} (dans la blacklist).")
+            print(f"Connection denied for IP address {address[0]} (in the blacklist).")
             conn.close()
             return
 
-        broadcast(f"{username} a rejoint la discussion!", conn)
+        broadcast(f"{username} has joined the discussion!", conn)
 
-        # Envoyer la liste des messages précédents au nouveau client
+        # Send the list of previous messages to the new client
         send_chat_log(conn)
 
         while state:
@@ -53,36 +87,39 @@ def handle_client(conn, address):
                 break
 
             if message.lower() == 'stop':
-                print("Arrêt du serveur")
+                print("Server shutdown")
                 state = False
                 break
             elif message.lower() == 'bye':
-                print(f'Client {username} déconnecté...')
+                print(f'Client {username} disconnected...')
                 break
             else:
-                # Enregistrer le message dans le fichier
+                # Save the message to the file
                 save_message(f"{username}: {message}")
 
-                # Envoyer le message à tous les clients, y compris l'émetteur
+                # Send the message to all clients, including the sender
                 broadcast(f"{username}: {message}", conn)
     except Exception as e:
-        print(f"Erreur de communication avec le client {address}: {e}")
+        print(f"Communication error with client {address}: {e}")
 
     clients.remove((conn, username))
     conn.close()
     print(f"Connection closed for {address}")
 
 def main():
+    """
+    Main function for the server.
+    """
     global state
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(('0.0.0.0', 1024))
     server_socket.listen(10)
 
-    print('En attente de connexion...')
+    print('Waiting for connections...')
 
     while state:
         conn, address = server_socket.accept()
-        print(f'Client connecté {address}')
+        print(f'Client connected {address}')
 
         threading.Thread(target=handle_client, args=(conn, address), daemon=True).start()
 
